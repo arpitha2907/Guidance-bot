@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/*
+  Design direction: calm, trustworthy, warm-clinical.
+  A health/emotional guidance tool should feel like a quiet consultation room,
+  not a tech chat widget. Soft paper background, deep ink text, a single sage
+  accent for the user's own voice, muted slate for the assistant.
+*/
+
+:root {
+  --paper: #f6f4ef;
+  --ink: #232a2e;
+  --sage-soft: #e4ede8;
+  --line: #e2ddd3;
+  --danger: #b4543a;
+  --muted: #5c655f;
+  --sage: #456b5c;
+  --user-bubble: #456b5c;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-line: var(--line);
+  --color-user-bubble: var(--user-bubble);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@keyframes dot-pulse {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+.typing-dot { animation: dot-pulse 1.2s infinite ease-in-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot { animation: none; }
+}
