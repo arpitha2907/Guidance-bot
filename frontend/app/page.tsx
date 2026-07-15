@@ -7,6 +7,13 @@ const API_BASE =
 
 const CONSENT_KEY = "guidance_consent_accepted";
 
+// Conversation persistence: survives page reloads/tab closes without making
+// the backend stateful -- the full client-side state is cached and restored
+// from localStorage. A TTL prevents a long-abandoned session from silently
+// resurrecting weeks later.
+const SESSION_KEY = "guidance_session_v1";
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 type Domain = "health" | "emotional";
 type Resource = { label: string; contact: string };
 type ClarifyOption = { label: string; domain: Domain };
@@ -21,6 +28,16 @@ type Message = {
   clarify?: boolean;
   options?: ClarifyOption[];
   notice?: boolean;
+};
+
+type PersistedSession = {
+  concern: string | null;
+  domain: Domain | null;
+  history: QA[];
+  pendingQuestion: string | null;
+  messages: Message[];
+  baseMessages: Message[] | null;
+  savedAt: number;
 };
 
 export default function Home() {
@@ -42,6 +59,19 @@ export default function Home() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState("");
 
+  // Snapshot of the chat transcript taken right before the FIRST follow-up
+  // question is asked (i.e. just the concern + any domain-clarification
+  // exchange). Used to rebuild the visible transcript from scratch when an
+  // earlier answer is edited, so editing truly truncates-and-replays rather
+  // than just patching an answer in place while leaving now-stale
+  // downstream Q&A bubbles on screen.
+  const baseMessagesRef = useRef<Message[] | null>(null);
+
+  // Guards the persistence-save effect from firing (and overwriting a real
+  // saved session with blank initial state) before the restore attempt below
+  // has had a chance to run.
+  const hydratedRef = useRef(false);
+
   useEffect(() => {
     try {
       setConsented(localStorage.getItem(CONSENT_KEY) === "true");
@@ -49,6 +79,59 @@ export default function Home() {
       setConsented(false);
     }
   }, []);
+
+  // Restore a previous conversation on mount, if one was saved and hasn't
+  // expired. Runs once; hydratedRef is flipped afterward regardless of
+  // outcome so the save-effect below knows it's safe to start persisting.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as PersistedSession;
+        const fresh =
+          parsed && typeof parsed.savedAt === "number" && Date.now() - parsed.savedAt < SESSION_TTL_MS;
+        if (fresh) {
+          setConcern(parsed.concern ?? null);
+          setDomain(parsed.domain ?? null);
+          setHistory(parsed.history ?? []);
+          setPendingQuestion(parsed.pendingQuestion ?? null);
+          setMessages(parsed.messages ?? []);
+          baseMessagesRef.current = parsed.baseMessages ?? null;
+        } else {
+          localStorage.removeItem(SESSION_KEY);
+        }
+      }
+    } catch {
+      // Corrupted or inaccessible storage -- start fresh rather than crash.
+      try {
+        localStorage.removeItem(SESSION_KEY);
+      } catch {}
+    } finally {
+      hydratedRef.current = true;
+    }
+  }, []);
+
+  // Persist the conversation on every change so a reload/tab-close resumes
+  // where the user left off. Skipped until hydration above has completed,
+  // so we never clobber a saved session with the blank initial state.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    try {
+      const session: PersistedSession = {
+        concern,
+        domain,
+        history,
+        pendingQuestion,
+        messages,
+        baseMessages: baseMessagesRef.current,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {
+      // Storage full or unavailable -- non-fatal, conversation just won't
+      // survive a reload this time.
+    }
+  }, [concern, domain, history, pendingQuestion, messages]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,7 +172,15 @@ export default function Home() {
       } else if (data.ask) {
         setDomain(data.domain);
         setPendingQuestion(data.question);
-        addBot({ text: data.question });
+        setMessages((current) => {
+          if (!baseMessagesRef.current && history.length === 0) {
+            // First question of this conversation -- remember everything
+            // before it (concern + optional clarify exchange) as the replay
+            // base for future edits.
+            baseMessagesRef.current = current;
+          }
+          return [...current, { role: "bot", text: data.question }];
+        });
       } else {
         addBot({ text: data.answer, sources: data.sources });
         resetConversation();
@@ -110,6 +201,7 @@ export default function Home() {
     setHistory([]);
     setPendingQuestion(null);
     setEditingIndex(null);
+    baseMessagesRef.current = null;
   }
 
   function send() {
@@ -158,20 +250,39 @@ export default function Home() {
     const text = editDraft.trim();
     if (!text) return;
 
-    const patched = history.map((qa, i) =>
-      i === editingIndex ? { ...qa, answer: text } : qa
-    );
-    setHistory(patched);
+    // TRUE truncate-and-replay: keep everything up to and including the
+    // edited step (with the new answer), and discard every question/answer
+    // that came after it -- those were follow-ups to the OLD answer and no
+    // longer apply once the answer changes.
+    const truncated = history
+      .slice(0, editingIndex)
+      .concat([{ question: history[editingIndex].question, answer: text }]);
+
     const stepNum = editingIndex + 1;
+    setHistory(truncated);
+    setPendingQuestion(null);
     setEditingIndex(null);
     setEditDraft("");
 
-    addBot({ text: `Conversation updated from step ${stepNum}.`, notice: true });
+    // Rebuild the visible transcript from the replay base + the truncated
+    // Q&A pairs, instead of leaving now-stale bot questions/user answers
+    // (from steps after the edited one) sitting in the chat log.
+    const base = baseMessagesRef.current ?? [];
+    const replayed: Message[] = truncated.flatMap((qa) => [
+      { role: "bot", text: qa.question },
+      { role: "user", text: qa.answer },
+    ]);
+    setMessages([
+      ...base,
+      ...replayed,
+      { role: "bot", text: `Conversation updated from step ${stepNum}.`, notice: true },
+    ]);
+
     if (concern) {
       callBackend({
         concern,
         domain: domain || undefined,
-        history: patched,
+        history: truncated,
       });
     }
   }

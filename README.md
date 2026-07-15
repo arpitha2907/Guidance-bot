@@ -83,9 +83,10 @@ than an ambiguous gap — see the note under Task 3 and under Future Work.
 All 7 MVP PRD tasks are implemented and deployable end to end. See
 `docs/Technical_Summary.md` section 8 for an honest, itemized assessment of
 what's fully done vs. partially done, and section 9 for known limitations and
-planned future work (legal/general domain expansion, conversation
-persistence across reloads, full questioning restart-on-edit, expanded
-crisis-detection patterns, and a full WCAG audit).
+remaining future work (a full WCAG audit and the legal/general domain
+decision). Conversation persistence across reloads, true truncate-and-replay
+on edit, and expanded crisis-detection patterns have since been implemented
+-- see `docs/Technical_Summary.md` for details.
 
 ## License
 
