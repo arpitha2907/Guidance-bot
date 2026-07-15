@@ -1,10 +1,13 @@
 # Multi-Domain Guidance Bot
 
-A conversational web app that gives general guidance in two domains — **health**
-and **emotional wellbeing** — grounded in a curated knowledge base using
-Retrieval-Augmented Generation (RAG). Answers come only from the project's own
-vetted dataset; the bot refuses when nothing relevant is found rather than
-falling back on a model's generic knowledge.
+A conversational web app that gives general guidance across four domains —
+**health**, **emotional wellbeing**, **legal**, and **general/practical**
+guidance — grounded in a curated knowledge base using Retrieval-Augmented
+Generation (RAG). Answers come only from the project's own vetted dataset;
+the bot refuses when nothing relevant is found rather than falling back on a
+model's generic knowledge. (The original MVP shipped with health and
+emotional only; legal and general were added post-MVP -- see the Post-MVP
+Addendum in `docs/PRD_Task_Breakdown.md`.)
 
 This repo has two independently deployable parts:
 
@@ -69,24 +72,29 @@ downstream processing and returns emergency resources instead.
 - [`docs/Technical_Summary.md`](docs/Technical_Summary.md) — architecture,
   module map, honest implementation-status assessment, and known limitations.
 
-### Known PRD/scope note
+### PRD scope history
 
-Task 3 of the PRD lists domain detection completion criteria for "Health,
-Emotional, and General" queries, while the MVP Scope Verification section
-only explicitly includes Health and Emotional (and excludes Legal). General
-was never implemented in code. `docs/PRD_Task_Breakdown.md` has been
-annotated to make this an explicit, intentional post-MVP exclusion rather
-than an ambiguous gap — see the note under Task 3 and under Future Work.
+Task 3 of the original PRD listed domain detection completion criteria for
+"Health, Emotional, and General" queries, while the MVP Scope Verification
+section only explicitly included Health and Emotional (and excluded Legal)
+-- General was never implemented in the original MVP. This inconsistency was
+resolved by making the MVP boundary explicit in `docs/PRD_Task_Breakdown.md`,
+and Legal + General have since been implemented post-MVP (see that file's
+Post-MVP Addendum) rather than left as an ambiguous gap.
 
 ## Current status
 
 All 7 MVP PRD tasks are implemented and deployable end to end. See
 `docs/Technical_Summary.md` section 8 for an honest, itemized assessment of
-what's fully done vs. partially done, and section 9 for known limitations and
-remaining future work (a full WCAG audit and the legal/general domain
-decision). Conversation persistence across reloads, true truncate-and-replay
-on edit, and expanded crisis-detection patterns have since been implemented
--- see `docs/Technical_Summary.md` for details.
+what's fully done vs. partially done, and section 9 for known limitations.
+Since the original MVP, the following have been added: conversation
+persistence across reloads, true truncate-and-replay on edit, expanded
+crisis-detection patterns, a keyboard/screen-reader accessibility pass with
+automated `jsx-a11y` linting in CI, and legal + general domain support (see
+`docs/PRD_Task_Breakdown.md`'s Post-MVP Addendum -- note this requires
+re-running `npm run ingest` to embed the new datasets). Remaining: a live
+assistive-technology testing session (real screen reader, not just
+automated linting).
 
 ## License
 

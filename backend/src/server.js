@@ -92,10 +92,12 @@ app.post("/ask", rateLimit, async (req, res) => {
         return res.json({
           clarify: true,
           message:
-            "I want to make sure I point you in the right direction. Is your question more about a physical health concern, or about how you're feeling emotionally?",
+            "I want to make sure I point you in the right direction. Which of these best describes your concern?",
           options: [
             { label: "Physical health", domain: "health" },
             { label: "Emotional wellbeing", domain: "emotional" },
+            { label: "A legal question", domain: "legal" },
+            { label: "Something else / general", domain: "general" },
           ],
         });
       }

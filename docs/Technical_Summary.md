@@ -3,13 +3,15 @@
 ## 1. Project Overview
 
 The Multi-Domain Guidance Bot is a conversational web application that
-provides general guidance in two domains — health and emotional wellbeing —
-grounded in a curated knowledge base using Retrieval-Augmented Generation
-(RAG). Rather than answering from a language model's general knowledge, the
-system retrieves vetted content from its own dataset and constrains the model
-to answer only from that content, refusing when no relevant information is
-found. This design ensures answers are specific, source-attributed, and
-trustworthy.
+provides general guidance across four domains -- health, emotional
+wellbeing, legal, and general/practical guidance -- grounded in a curated
+knowledge base using Retrieval-Augmented Generation (RAG). (The MVP shipped
+with health and emotional only; legal and general were added post-MVP, see
+`docs/PRD_Task_Breakdown.md`'s Post-MVP Addendum.) Rather than answering from
+a language model's general knowledge, the system retrieves vetted content
+from its own dataset and constrains the model to answer only from that
+content, refusing when no relevant information is found. This design ensures
+answers are specific, source-attributed, and trustworthy.
 
 The application detects the domain of a user's concern automatically, asks
 dynamic follow-up questions to gather context, screens every message for
@@ -128,7 +130,7 @@ and a domain filter. The dimension is set to 3072 to match the Gemini
 - Edit-previous-answers with TRUE truncate-and-replay (editing an earlier answer discards all downstream Q&A and continues from that step) and a 'Conversation updated from step N' notification.
 - Anonymous sessions (no authentication); conversation history now persists across page reloads/tab closes via a client-side cache (24-hour expiry), while the backend stays fully stateless.
 - In-memory rate limiting at 20 requests per minute per client.
-- Accessibility: WCAG AA text-contrast verified by measurement; accessible labels and semantic roles added.
+- Accessibility: WCAG AA text-contrast verified by measurement; accessible labels and semantic roles added; disclaimer dialog has a real focus trap with Escape-to-close and focus-return; chat log uses a gated live region for screen-reader announcements; automated jsx-a11y linting runs in CI.
 
 ## 6. Backend Module Map
 
@@ -171,9 +173,17 @@ rather than claimed as fully complete:
   truncate-and-replay: editing an earlier answer discards every
   question/answer that came after it and the conversation continues from
   that step. (Previously this was patch-in-place; upgraded.)
-- WCAG 2.1 AA: text-contrast ratios were measured and corrected to pass AA,
-  and accessibility foundations (labels, roles, focus states) are in place; a
-  full audit (keyboard and screen-reader testing) is pending.
+- WCAG 2.1 AA: text-contrast ratios were measured and corrected to pass AA.
+  Keyboard/screen-reader work has since been added: a real focus trap on the
+  disclaimer dialog (Escape closes it, focus moves in on open and back to
+  the trigger on close), a gated `aria-live="polite"` region on the chat log
+  so new messages are announced without reading a restored conversation
+  aloud in bulk, an accessible label on the typing indicator, and focus
+  moved into the textarea after accepting consent. An automated
+  `eslint-plugin-jsx-a11y` lint pass runs in CI. What's still missing: a
+  live testing session with an actual screen reader (NVDA/JAWS/VoiceOver) —
+  everything above was verified via code review, TypeScript, and automated
+  linting, not hands-on assistive-technology testing.
 - Response time under 2 seconds: typical turns are fast, but this should be
   measured on the deployed service and reported as measured values. The
   free-tier backend has a cold-start delay after idle periods.
@@ -183,9 +193,11 @@ rather than claimed as fully complete:
 
 ## 9. Known Limitations & Future Work
 
-- Legal and general domains are out of MVP scope (as specified in the PRD,
-  and now made explicit in `docs/PRD_Task_Breakdown.md`) and could be added
-  by extending the intent classifier, dataset, and domain filter.
+- Legal and general domains, originally out of MVP scope, have since been
+  added (intent classifier now recognizes 4 domains, plus starter datasets
+  for each -- see `docs/PRD_Task_Breakdown.md`'s Post-MVP Addendum). The
+  legal content is deliberately general/educational rather than
+  jurisdiction-specific advice and has not been legally reviewed.
 - Crisis detection is keyword-based and acts as a safety net, not a
   guarantee. Pattern lists were broadened (more self-harm, abuse/violence,
   and medical-emergency phrasings, including stroke FAST signs) and are

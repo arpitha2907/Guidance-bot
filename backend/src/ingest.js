@@ -24,6 +24,7 @@ function inferDomain(filename) {
   const lower = filename.toLowerCase();
   if (lower.startsWith("health")) return "health";
   if (lower.startsWith("emotional")) return "emotional";
+  if (lower.startsWith("legal")) return "legal";
   return "general";
 }
 

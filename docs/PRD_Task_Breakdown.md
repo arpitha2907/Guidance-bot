@@ -192,7 +192,7 @@ Implement essential UX features including consent management, answer editing cap
 - [x] 'Conversation updated from step N' notification appears
 - [x] Anonymous sessions work without sign-up
 - [x] Conversation history available during session, and now persists across page reloads/tab closes via a client-side session cache with a 24-hour expiry (backend remains stateless; no server-side session store was added)
-- [ ] UI meets WCAG 2.1 AA accessibility standards — **contrast measured and corrected to AA; full keyboard/screen-reader audit pending**
+- [x] UI meets WCAG 2.1 AA accessibility standards — **contrast measured and corrected to AA; keyboard/screen-reader semantics addressed (focus trap + Escape + focus-return on the disclaimer dialog, a gated live region so new bot messages/notices are announced without reading a restored conversation aloud in bulk, an accessible label on the typing indicator, and focus moved into the app on consent). An automated `eslint-plugin-jsx-a11y` lint pass now runs in CI on every push. Not done: a live assistive-technology testing session with a real screen reader (NVDA/JAWS/VoiceOver) — the above is verified via code-level review and automated linting, not a hands-on AT session.**
 - [ ] Response times under 2 seconds per message — **needs to be measured and reported on the deployed service; not yet formally verified**
 - [x] Rate limiting implemented (20 requests/minute/user, in-memory per-IP)
 - [x] HTTPS properly configured with no client-side secrets
@@ -235,3 +235,52 @@ Implement essential UX features including consent management, answer editing cap
 - Crisis detection accuracy and legal compliance
 - User data privacy and security requirements
 - Cross-browser and device compatibility
+
+
+---
+
+## Post-MVP Addendum: Legal & General Domain Expansion
+
+This section documents work done AFTER the original 7-task MVP described
+above. It is kept separate from the MVP tasks/completion-criteria tables so
+the original MVP scope record stays accurate for anyone reviewing history --
+the checkmarks above reflect that Legal/General are no longer excluded, but
+the detailed "how" lives here rather than retroactively rewriting Task 3.
+
+**What changed:**
+- `backend/src/intent.js`: the classifier now recognizes four domains
+  (`health`, `emotional`, `legal`, `general`) instead of two, plus `unclear`.
+- `backend/src/server.js`: the domain-clarification prompt now offers all
+  four options instead of two.
+- `backend/src/ingest.js`: `inferDomain()` now maps filenames starting with
+  `legal` to the `legal` domain (previously only `health`/`emotional` had
+  explicit prefixes; anything else fell through to `general`, which is now
+  a real, populated domain rather than an unused fallback).
+- `backend/data/`: added `legal_consumer_complaint.md`,
+  `legal_tenant_rights.md`, `legal_workplace_dispute.md`,
+  `general_budgeting_basics.md`, and `general_job_interview_prep.md` --
+  general, non-jurisdiction-specific educational content, each ending in
+  the same "not a substitute for professional advice" framing as the
+  existing health/emotional samples.
+- `frontend/app/page.tsx`: the `Domain` type now includes `"legal"` and
+  `"general"`; no other frontend logic needed to change since domain-choice
+  buttons are rendered generically from whatever `options` the backend
+  returns.
+- The safety gate (`backend/src/safety.js`) is unaffected: it still screens
+  every message for abuse/violence/medical/self-harm signals BEFORE domain
+  classification runs, regardless of which of the four domains a message
+  would otherwise land in.
+
+**Operational step required after pulling this in:** the new
+`legal_*`/`general_*` dataset files must be embedded into Atlas before the
+new domains will return real guidance instead of the "I don't have specific
+vetted guidance on that" refusal. Run `npm run ingest` in `backend/` once
+(same command used for the original dataset).
+
+**Honest scope note:** the legal content here is deliberately general and
+educational (how consumer/tenancy/workplace disputes typically work, what
+records to keep, when to escalate) rather than jurisdiction-specific legal
+advice, since specific statutes/deadlines vary by region and the existing
+disclaimer/refusal framing already tells users this is not a substitute for
+professional advice. This was not run through a legal review; treat it as a
+reasonable MVP-quality starting dataset, not a vetted legal-content pipeline.

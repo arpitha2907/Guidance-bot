@@ -14,7 +14,7 @@ const CONSENT_KEY = "guidance_consent_accepted";
 const SESSION_KEY = "guidance_session_v1";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-type Domain = "health" | "emotional";
+type Domain = "health" | "emotional" | "legal" | "general";
 type Resource = { label: string; contact: string };
 type ClarifyOption = { label: string; domain: Domain };
 type QA = { question: string; answer: string };
@@ -45,6 +45,15 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const disclaimerTriggerRef = useRef<HTMLButtonElement>(null);
+  const disclaimerCloseRef = useRef<HTMLButtonElement>(null);
+
+  // Accessibility: the chat log becomes an aria-live region only after the
+  // initial mount/restore has finished rendering, so a restored conversation
+  // (potentially many messages) isn't read aloud in bulk by a screen
+  // reader -- only genuinely new messages after that point are announced.
+  const [liveAnnouncementsEnabled, setLiveAnnouncementsEnabled] = useState(false);
 
   // Three states: null = still checking localStorage (avoid flashing the
   // full app before we know), false = must show consent gate, true = go ahead.
@@ -108,6 +117,9 @@ export default function Home() {
       } catch {}
     } finally {
       hydratedRef.current = true;
+      // Small delay so the (possibly bulk) restored transcript finishes
+      // rendering before the live region starts announcing new content.
+      setTimeout(() => setLiveAnnouncementsEnabled(true), 300);
     }
   }, []);
 
@@ -137,11 +149,46 @@ export default function Home() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Tracks whether the dialog has actually been opened at least once, so
+  // the "restore focus to the trigger" branch doesn't fire on initial page
+  // load (showDisclaimer starts false, which would otherwise steal focus
+  // away from the textarea right after mount).
+  const hasOpenedDisclaimerRef = useRef(false);
+
+  useEffect(() => {
+    if (showDisclaimer) {
+      hasOpenedDisclaimerRef.current = true;
+      disclaimerCloseRef.current?.focus();
+    } else if (hasOpenedDisclaimerRef.current) {
+      disclaimerTriggerRef.current?.focus();
+    }
+  }, [showDisclaimer]);
+
+  function closeDisclaimer() {
+    setShowDisclaimer(false);
+  }
+
+  // Keyboard support for the disclaimer dialog: Escape closes it, and Tab /
+  // Shift+Tab are trapped on the single focusable control inside (the Close
+  // button) so focus can't silently leave the modal while it's open.
+  function onDisclaimerKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeDisclaimer();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      disclaimerCloseRef.current?.focus();
+    }
+  }
+
   function acceptConsent() {
     try {
       localStorage.setItem(CONSENT_KEY, "true");
     } catch {}
     setConsented(true);
+    // Move focus into the chat UI once it mounts, instead of leaving focus
+    // stranded on a button that's about to disappear.
+    setTimeout(() => textareaRef.current?.focus(), 0);
   }
 
   function addBot(msg: Omit<Message, "role">) {
@@ -332,7 +379,11 @@ export default function Home() {
         </p>
       </header>
 
-      <main className="flex-1 space-y-4 overflow-y-auto py-6">
+      <main
+        className="flex-1 space-y-4 overflow-y-auto py-6"
+        aria-live={liveAnnouncementsEnabled ? "polite" : "off"}
+        aria-relevant="additions"
+      >
         {messages.length === 0 && (
           <div className="mt-12 text-center text-sm text-muted">
             Describe what&apos;s going on. I may ask a few questions before
@@ -417,11 +468,12 @@ export default function Home() {
         {loading && (
           <div className="flex justify-start">
             <div className="rounded-2xl rounded-bl-sm bg-white px-4 py-3 shadow-sm">
-              <span className="flex gap-1">
+              <span className="flex gap-1" aria-hidden="true">
                 <span className="typing-dot h-2 w-2 rounded-full bg-muted" />
                 <span className="typing-dot h-2 w-2 rounded-full bg-muted" style={{ animationDelay: "0.2s" }} />
                 <span className="typing-dot h-2 w-2 rounded-full bg-muted" style={{ animationDelay: "0.4s" }} />
               </span>
+              <span className="sr-only">Assistant is typing…</span>
             </div>
           </div>
         )}
@@ -481,6 +533,7 @@ export default function Home() {
       <footer className="border-t border-line py-4">
         <div className="flex items-end gap-2">
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
@@ -500,6 +553,7 @@ export default function Home() {
         <p className="mt-2 text-center text-xs text-muted">
           If this is an emergency, contact local emergency services.{" "}
           <button
+            ref={disclaimerTriggerRef}
             onClick={() => setShowDisclaimer(true)}
             className="underline underline-offset-2 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-sage"
           >
@@ -509,18 +563,28 @@ export default function Home() {
       </footer>
 
       {showDisclaimer && (
+        // The backdrop's onClick-to-dismiss and the content wrapper's
+        // stopPropagation are pointer-only conveniences. Keyboard users
+        // already have full equivalent access via Escape (onKeyDown below)
+        // and the explicit Close button, so these aren't made separately
+        // "interactive" for keyboard/AT users -- there's nothing meaningful
+        // to activate on the backdrop itself beyond what those provide.
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
         <div
           className="fixed inset-0 z-10 flex items-center justify-center bg-black/30 px-6"
           role="dialog"
           aria-modal="true"
           aria-label="Disclaimer"
-          onClick={() => setShowDisclaimer(false)}
+          onClick={closeDisclaimer}
+          onKeyDown={onDisclaimerKeyDown}
         >
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events */}
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-base font-semibold text-ink">Disclaimer</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted">{disclaimerText}</p>
             <button
-              onClick={() => setShowDisclaimer(false)}
+              ref={disclaimerCloseRef}
+              onClick={closeDisclaimer}
               className="mt-5 w-full rounded-2xl bg-sage-soft px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-line focus:outline-none focus-visible:ring-2 focus-visible:ring-sage"
             >
               Close

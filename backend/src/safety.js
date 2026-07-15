@@ -9,10 +9,16 @@
 // crisis response with the right resources and the normal flow is halted by
 // the caller (server.js). We never resume questioning after a trigger.
 //
-// Scope note on "legal": pure legal questions (contracts, tenancy) are NOT
-// crises and are out of MVP scope. What we DO catch under this banner are
-// legal situations that are really SAFETY emergencies -- threats, abuse,
-// domestic violence -- which route to emergency services + abuse support.
+// Scope note on "legal": pure informational legal questions (contracts,
+// tenancy, consumer disputes) are NOT crises -- since the "legal" intent
+// domain was added (see docs/PRD_Task_Breakdown.md Post-MVP Addendum),
+// those are handled by the normal RAG/guidance flow like any other domain.
+// What THIS safety gate catches under "abuse_violence" are legal SITUATIONS
+// that are really SAFETY emergencies -- threats, abuse, domestic violence --
+// which route to emergency services + abuse support instead of guidance.
+// This gate runs before intent detection, so it applies regardless of
+// which domain (health/emotional/legal/general) the message would
+// otherwise be classified into.
 
 // --- Verified resources (India) ---
 // Vandrevala Foundation 24/7 mental health helpline: +91 9999 666 555
