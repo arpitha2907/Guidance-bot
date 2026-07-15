@@ -11,21 +11,69 @@ import { screenForCrisis } from "./safety.js";
 import { detectIntent } from "./intent.js";
 import { nextStep, buildGuidanceQuery } from "./questioning.js";
 import { rateLimit } from "./ratelimit.js";
+import { getMongoClient } from "./vectorstore.js";
+
+// Limits on user-supplied text so a single request can't blow up token
+// costs or hang the process on a pathological payload.
+const MAX_FIELD_LENGTH = 2000;
+const MAX_HISTORY_ITEMS = 20;
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
+// CORS is restricted to known frontend origins (see config.js /
+// FRONTEND_ORIGIN env var) rather than left open to any origin.
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow non-browser requests (no Origin header, e.g. curl/health checks).
+      if (!origin || config.frontendOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+  })
+);
+app.use(express.json({ limit: "100kb" }));
+
+app.get("/health", async (req, res) => {
+  let dbStatus = "unknown";
+  try {
+    const client = await getMongoClient();
+    await client.db().command({ ping: 1 });
+    dbStatus = "ok";
+  } catch {
+    dbStatus = "unreachable";
+  }
+  const status = dbStatus === "ok" ? "ok" : "degraded";
+  res.status(status === "ok" ? 200 : 503).json({
+    status,
+    db: dbStatus,
+    time: new Date().toISOString(),
+  });
 });
+
+function isValidText(value, maxLength = MAX_FIELD_LENGTH) {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= maxLength;
+}
 
 app.post("/ask", rateLimit, async (req, res) => {
   try {
     const { concern, domain, history = [], latestAnswer } = req.body || {};
 
-    if (!concern || typeof concern !== "string") {
-      return res.status(400).json({ error: "Provide a 'concern' string." });
+    if (!isValidText(concern)) {
+      return res.status(400).json({
+        error: `Provide a 'concern' string (1-${MAX_FIELD_LENGTH} characters).`,
+      });
+    }
+    if (latestAnswer !== undefined && !isValidText(latestAnswer)) {
+      return res.status(400).json({
+        error: `'latestAnswer' must be a string (1-${MAX_FIELD_LENGTH} characters).`,
+      });
+    }
+    if (!Array.isArray(history) || history.length > MAX_HISTORY_ITEMS) {
+      return res.status(400).json({
+        error: `'history' must be an array of at most ${MAX_HISTORY_ITEMS} items.`,
+      });
     }
 
     // 1. SAFETY GATE -- screen original concern AND the latest typed answer.
@@ -78,4 +126,5 @@ app.post("/ask", rateLimit, async (req, res) => {
 app.listen(config.port, () => {
   console.log(`Backend running at http://localhost:${config.port}`);
   console.log(`Health check: http://localhost:${config.port}/health`);
+  console.log(`Allowed frontend origins: ${config.frontendOrigins.join(", ")}`);
 });

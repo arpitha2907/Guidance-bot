@@ -16,7 +16,7 @@ User question
 
 Two providers, both via API, both wrapped by LangChain:
 - **Groq** (llama-3.3-70b-versatile) — writes the answers (fast, cheap)
-- **Gemini** (text-embedding-004, 768-dim) — embeddings for search
+- **Gemini** (gemini-embedding-001, 3072-dim) — embeddings for search
 
 ## Setup
 
@@ -43,13 +43,14 @@ Name it `guidance_vector_index`. Paste:
 ```json
 {
   "fields": [
-    { "type": "vector", "path": "embedding", "numDimensions": 768, "similarity": "cosine" },
+    { "type": "vector", "path": "embedding", "numDimensions": 3072, "similarity": "cosine" },
     { "type": "filter", "path": "domain" }
   ]
 }
 ```
-numDimensions MUST be **768** (matches Gemini text-embedding-004). Wait until
-the index status is **Active** (~1 min).
+numDimensions MUST be **3072** (matches Gemini `gemini-embedding-001`, the
+model actually configured in `src/llm.js`). Wait until the index status is
+**Active** (~1 min).
 
 ### 5. Add data
 Drop `.md`/`.txt` files in `data/`, named by domain (`health_*`, `emotional_*`).

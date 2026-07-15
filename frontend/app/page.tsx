@@ -29,7 +29,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const [consented, setConsented] = useState(true);
+  // Three states: null = still checking localStorage (avoid flashing the
+  // full app before we know), false = must show consent gate, true = go ahead.
+  const [consented, setConsented] = useState<boolean | null>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   const [concern, setConcern] = useState<string | null>(null);
@@ -183,6 +185,12 @@ export default function Home() {
 
   const disclaimerText =
     "This tool offers general guidance for informational purposes only. It is not a medical, legal, or mental-health service and does not provide diagnosis or professional advice. It may be inaccurate or incomplete. For any urgent or serious concern, contact a qualified professional or your local emergency services. By continuing, you acknowledge that you understand this.";
+
+  // Still checking localStorage on mount -- render nothing rather than
+  // flashing the full chat UI before we know if consent was given.
+  if (consented === null) {
+    return <div className="h-dvh" />;
+  }
 
   if (!consented) {
     return (

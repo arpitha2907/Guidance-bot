@@ -9,11 +9,26 @@ import { embeddings } from "./llm.js";
 import { config } from "./config.js";
 
 const client = new MongoClient(config.mongoUri);
+let connected = false;
+
+async function ensureConnected() {
+  if (!connected) {
+    await client.connect();
+    connected = true;
+  }
+  return client;
+}
+
+// Exposed so callers (e.g. the /health endpoint) can run a lightweight ping
+// without duplicating connection setup.
+export async function getMongoClient() {
+  return ensureConnected();
+}
 
 let collection;
 async function getCollection() {
   if (!collection) {
-    await client.connect();
+    await ensureConnected();
     collection = client.db(config.mongoDb).collection(config.mongoCollection);
   }
   return collection;
@@ -31,4 +46,5 @@ export async function getVectorStore() {
 
 export async function closeConnection() {
   await client.close();
+  connected = false;
 }
