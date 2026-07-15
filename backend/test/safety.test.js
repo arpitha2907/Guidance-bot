@@ -52,6 +52,46 @@ test("handles non-string / empty input safely", () => {
   assert.equal(screenForCrisis(12345), null);
 });
 
+test("detects expanded self-harm phrasing variants", () => {
+  const phrases = [
+    "I don't want to be alive anymore",
+    "I feel like there's no point in living",
+    "I've been thinking about suicide a lot lately",
+    "I can't take this anymore, I want it to be over",
+  ];
+  for (const phrase of phrases) {
+    const result = screenForCrisis(phrase);
+    assert.ok(result, `expected a crisis match for: "${phrase}"`);
+    assert.equal(result.type, "self_harm");
+  }
+});
+
+test("detects expanded abuse/violence phrasing variants", () => {
+  const phrases = [
+    "my husband hits me whenever he's angry",
+    "he won't let me see my family anymore",
+    "I think my child is being groomed online",
+  ];
+  for (const phrase of phrases) {
+    const result = screenForCrisis(phrase);
+    assert.ok(result, `expected a crisis match for: "${phrase}"`);
+    assert.equal(result.type, "abuse_violence");
+  }
+});
+
+test("detects expanded medical emergency phrasing variants (stroke FAST signs)", () => {
+  const phrases = [
+    "my dad suddenly has slurred speech and face drooping",
+    "I can't feel my legs all of a sudden",
+    "she is unresponsive and not waking up",
+  ];
+  for (const phrase of phrases) {
+    const result = screenForCrisis(phrase);
+    assert.ok(result, `expected a crisis match for: "${phrase}"`);
+    assert.equal(result.type, "medical_emergency");
+  }
+});
+
 test("exports the three documented categories", () => {
   assert.deepEqual(
     [...SAFETY_CATEGORIES].sort(),

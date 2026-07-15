@@ -33,6 +33,12 @@ const RESOURCES = {
 // Each category: a set of lowercase patterns and the response to show.
 // Patterns are matched as substrings against the normalised message.
 // Order matters: we check the most acute categories first.
+//
+// This is a safety NET, not a guarantee (see docs/Technical_Summary.md
+// section 9). Pattern lists were expanded from the MVP baseline to cover
+// more real-world phrasing per category; a model-based second check remains
+// a documented future-work item rather than something implemented here, to
+// keep this gate deterministic and auditable.
 const CATEGORIES = [
   {
     type: "self_harm",
@@ -41,6 +47,13 @@ const CATEGORIES = [
       "want to die", "wanna die", "suicide", "suicidal", "self harm",
       "self-harm", "hurt myself", "harming myself", "no reason to live",
       "better off dead", "take my own life", "cut myself", "overdose",
+      "don't want to be alive", "dont want to be alive", "not worth living",
+      "can't go on", "cant go on", "want to disappear forever",
+      "planning to end it", "thinking about suicide", "self harming",
+      "cutting myself", "hurting myself on purpose", "no point in living",
+      "ready to die", "tired of living", "want it to be over",
+      "self injury", "self-injury", "ending it all", "can't take this anymore",
+      "cant take this anymore", "life isn't worth living",
     ],
     message:
       "It sounds like you may be going through something extremely painful, and I'm concerned for your safety. I'm not able to help with this myself, but please reach out right now to people who can:",
@@ -55,6 +68,12 @@ const CATEGORIES = [
       "afraid for my life", "afraid of him", "afraid of her", "being assaulted",
       "sexual assault", "raped", "being stalked", "trafficking",
       "held against my will", "won't let me leave", "locked me",
+      "husband hits me", "wife hits me", "partner hits me", "being controlled by",
+      "won't let me out", "wont let me out", "forced me to", "forced marriage",
+      "scared he will hurt me", "scared she will hurt me", "being harassed",
+      "child abuse", "being groomed", "human trafficking", "coercive control",
+      "isolated me from", "monitors everything i do", "took my phone away",
+      "won't let me see my family", "wont let me see my family",
     ],
     message:
       "What you're describing sounds dangerous, and your safety matters most. If you are in immediate danger, please contact emergency services. Support is also available:",
@@ -67,7 +86,12 @@ const CATEGORIES = [
       "struggling to breathe", "severe bleeding", "bleeding heavily",
       "unconscious", "passed out", "not breathing", "stroke", "heart attack",
       "seizure", "choking", "severe allergic", "anaphylaxis", "poisoned",
-      "overdosed",
+      "overdosed", "slurred speech", "face drooping", "sudden numbness",
+      "sudden weakness on one side", "can't feel my", "cant feel my",
+      "severe abdominal pain", "convulsions", "anaphylactic",
+      "severe burn", "compound fracture", "coughing blood", "vomiting blood",
+      "unresponsive", "not waking up", "turning blue", "cant feel my legs",
+      "can't feel my legs",
     ],
     message:
       "This may be a medical emergency. Please contact emergency services or go to the nearest hospital right away. Do not wait for online guidance:",

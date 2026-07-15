@@ -125,8 +125,8 @@ and a domain filter. The dimension is set to 3072 to match the Gemini
 
 **Task 7 — UX & Consent**
 - First-use consent screen with persisted acceptance; always-available disclaimer. Consent check no longer flashes the full app before localStorage is read.
-- Edit-previous-answers (patch-in-place) with a 'Conversation updated from step N' notification.
-- Anonymous sessions (no authentication); in-session conversation history.
+- Edit-previous-answers with TRUE truncate-and-replay (editing an earlier answer discards all downstream Q&A and continues from that step) and a 'Conversation updated from step N' notification.
+- Anonymous sessions (no authentication); conversation history now persists across page reloads/tab closes via a client-side cache (24-hour expiry), while the backend stays fully stateless.
 - In-memory rate limiting at 20 requests per minute per client.
 - Accessibility: WCAG AA text-contrast verified by measurement; accessible labels and semantic roles added.
 
@@ -167,9 +167,10 @@ All seven PRD tasks are implemented and the application is deployed and
 functional end to end. The following items are characterised accurately
 rather than claimed as fully complete:
 
-- 'Conversation restarts when edited' is implemented as patch-in-place
-  (guidance regenerates from the edited history); a full questioning restart
-  (truncate-and-replay) was not implemented — tracked as future work.
+- 'Conversation restarts when edited' is implemented as TRUE
+  truncate-and-replay: editing an earlier answer discards every
+  question/answer that came after it and the conversation continues from
+  that step. (Previously this was patch-in-place; upgraded.)
 - WCAG 2.1 AA: text-contrast ratios were measured and corrected to pass AA,
   and accessibility foundations (labels, roles, focus states) are in place; a
   full audit (keyboard and screen-reader testing) is pending.
@@ -186,11 +187,19 @@ rather than claimed as fully complete:
   and now made explicit in `docs/PRD_Task_Breakdown.md`) and could be added
   by extending the intent classifier, dataset, and domain filter.
 - Crisis detection is keyword-based and acts as a safety net, not a
-  guarantee; patterns should be expanded over time and could be supplemented
-  with a model-based second check.
-- Conversation state does not persist across page reloads (anonymous,
-  in-session only).
+  guarantee. Pattern lists were broadened (more self-harm, abuse/violence,
+  and medical-emergency phrasings, including stroke FAST signs) and are
+  unit-tested, but should keep expanding over time; a model-based second
+  check remains future work.
+- Conversation state now persists across page reloads/tab closes via a
+  client-side (localStorage) cache with a 24-hour expiry -- the backend
+  remains stateless; no server-side session store was introduced. A
+  dedicated multi-conversation history browser (switching between past,
+  separate conversations) was not built -- only the current conversation is
+  resumable.
 - The free-tier backend spins down when idle, causing a cold-start delay on
   the first request.
 - No automated frontend tests yet (backend now has unit tests for the safety
-  gate, rate limiter, and questioning helpers via CI).
+  gate, rate limiter, and questioning helpers via CI). The truncate-and-replay
+  edit flow was verified manually and via TypeScript type-checking rather
+  than an automated component test.

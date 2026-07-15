@@ -139,7 +139,7 @@ Implement the system that analyzes collected information and generates structure
 - [x] Includes appropriate domain-specific disclaimers
 - [x] Guidance is written in plain, easy-to-understand language
 - [x] Summary accurately reflects information collected during questioning
-- [x] Guidance updates when previous answers are edited (patch-in-place; see Task 7 note)
+- [x] Guidance updates when previous answers are edited (true truncate-and-replay; see Task 7 note)
 - [x] Proper formatting and display of guidance in chat UI
 - [x] Option to continue chatting after receiving guidance
 
@@ -188,10 +188,10 @@ Implement essential UX features including consent management, answer editing cap
 - [x] First-time users see and must accept consent disclaimer
 - [x] Disclaimer link always visible at bottom of screen
 - [x] Users can tap 'Edit' on any previous answer
-- [x] Conversation restarts appropriately when answers are edited — **implemented as patch-in-place (guidance regenerates from edited history); full truncate-and-replay restart is tracked as future work, not yet implemented**
+- [x] Conversation restarts appropriately when answers are edited — **implemented as true truncate-and-replay: editing an earlier answer discards every question/answer that came after it and continues from that step, matching this criterion literally (previously this was patch-in-place; upgraded)**
 - [x] 'Conversation updated from step N' notification appears
 - [x] Anonymous sessions work without sign-up
-- [x] Conversation history available during session (does not yet persist across page reloads — future work)
+- [x] Conversation history available during session, and now persists across page reloads/tab closes via a client-side session cache with a 24-hour expiry (backend remains stateless; no server-side session store was added)
 - [ ] UI meets WCAG 2.1 AA accessibility standards — **contrast measured and corrected to AA; full keyboard/screen-reader audit pending**
 - [ ] Response times under 2 seconds per message — **needs to be measured and reported on the deployed service; not yet formally verified**
 - [x] Rate limiting implemented (20 requests/minute/user, in-memory per-IP)
@@ -214,7 +214,8 @@ Implement essential UX features including consent management, answer editing cap
 - ❌ Legal domain
 - ❌ General domain *(added: previously implied by omission, now made explicit — the intent classifier only distinguishes Health, Emotional, and Unclear)*
 - ❌ Registered user accounts
-- ❌ Conversation history UI (persistence across reloads)
+- ✅ Conversation history persists across reloads (client-side cache, added post-MVP)
+- ❌ Conversation history UI (a dedicated multi-conversation history browser was not built -- persistence covers resuming the CURRENT conversation only)
 - ❌ Multi-language support
 - ❌ Voice interaction
 
