@@ -24,4 +24,13 @@ export const config = {
   mongoCollection: process.env.MONGODB_COLLECTION || "guidance_chunks",
   atlasVectorIndex: process.env.ATLAS_VECTOR_INDEX || "guidance_vector_index",
   port: parseInt(process.env.PORT || "4000", 10),
+  // Comma-separated list of allowed frontend origins for CORS. Defaults to
+  // common local dev ports so `npm run dev` keeps working out of the box;
+  // set this explicitly in production (e.g. your Vercel URL).
+  frontendOrigins: (
+    process.env.FRONTEND_ORIGIN || "http://localhost:3000,http://127.0.0.1:3000"
+  )
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
 };

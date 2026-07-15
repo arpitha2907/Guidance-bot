@@ -6,7 +6,8 @@
   "scripts": {
     "ingest": "node src/ingest.js",
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "GROQ_API_KEY=test-key GOOGLE_API_KEY=test-key MONGODB_URI=mongodb://localhost:27017/test node --test"
   },
   "dependencies": {
     "@langchain/core": "^1.1.48",
