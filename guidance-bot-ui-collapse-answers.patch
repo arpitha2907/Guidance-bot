@@ -1,0 +1,174 @@
+---
+ frontend/app/page.tsx | 142 ++++++++++++++++++++++++++++--------------
+ 1 file changed, 96 insertions(+), 46 deletions(-)
+
+diff --git a/frontend/app/page.tsx b/frontend/app/page.tsx
+index 9527d17..c2fd3eb 100644
+--- a/frontend/app/page.tsx
++++ b/frontend/app/page.tsx
+@@ -68,6 +68,13 @@ export default function Home() {
+   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+   const [editDraft, setEditDraft] = useState("");
+ 
++  // "Your answers so far" is a floating dropdown anchored above the input
++  // instead of an always-expanded panel, so it doesn't permanently eat into
++  // the space where the conversation is visible -- it only takes up room
++  // while the user has actually opened it to review or edit something.
++  const [answersOpen, setAnswersOpen] = useState(false);
++  const answersPanelRef = useRef<HTMLDivElement>(null);
++
+   // Snapshot of the chat transcript taken right before the FIRST follow-up
+   // question is asked (i.e. just the concern + any domain-clarification
+   // exchange). Used to rebuild the visible transcript from scratch when an
+@@ -164,6 +171,26 @@ export default function Home() {
+     }
+   }, [showDisclaimer]);
+ 
++  // Close the answers dropdown on outside click or Escape, same pattern
++  // used for the disclaimer dialog.
++  useEffect(() => {
++    if (!answersOpen) return;
++    function onPointerDown(e: MouseEvent) {
++      if (answersPanelRef.current && !answersPanelRef.current.contains(e.target as Node)) {
++        setAnswersOpen(false);
++      }
++    }
++    function onKeyDown(e: KeyboardEvent) {
++      if (e.key === "Escape") setAnswersOpen(false);
++    }
++    document.addEventListener("mousedown", onPointerDown);
++    document.addEventListener("keydown", onKeyDown);
++    return () => {
++      document.removeEventListener("mousedown", onPointerDown);
++      document.removeEventListener("keydown", onKeyDown);
++    };
++  }, [answersOpen]);
++
+   function closeDisclaimer() {
+     setShowDisclaimer(false);
+   }
+@@ -481,52 +508,75 @@ export default function Home() {
+       </main>
+ 
+       {history.length > 0 && (
+-        <div className="border-t border-line py-3">
+-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+-            Your answers so far
+-          </p>
+-          <ul className="space-y-2">
+-            {history.map((qa, idx) => (
+-              <li key={idx} className="rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
+-                <p className="text-xs text-muted">{qa.question}</p>
+-                {editingIndex === idx ? (
+-                  <div className="mt-1 flex items-center gap-2">
+-                    <input
+-                      value={editDraft}
+-                      onChange={(e) => setEditDraft(e.target.value)}
+-                      aria-label="Edit your answer"
+-                      className="flex-1 rounded-md border border-line px-2 py-1 text-sm focus:border-sage focus:outline-none"
+-                    />
+-                    <button
+-                      onClick={saveEdit}
+-                      disabled={loading || !editDraft.trim()}
+-                      className="rounded-md bg-sage px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
+-                    >
+-                      Save
+-                    </button>
+-                    <button
+-                      onClick={cancelEdit}
+-                      className="rounded-md bg-sage-soft px-3 py-1 text-xs font-medium text-ink"
+-                    >
+-                      Cancel
+-                    </button>
+-                  </div>
+-                ) : (
+-                  <div className="mt-1 flex items-center justify-between gap-2">
+-                    <span className="text-ink">{qa.answer}</span>
+-                    <button
+-                      onClick={() => startEdit(idx)}
+-                      disabled={loading}
+-                      aria-label={`Edit answer to: ${qa.question}`}
+-                      className="shrink-0 text-xs font-medium text-sage underline underline-offset-2 disabled:opacity-40"
+-                    >
+-                      Edit
+-                    </button>
+-                  </div>
+-                )}
+-              </li>
+-            ))}
+-          </ul>
++        <div ref={answersPanelRef} className="relative border-t border-line">
++          <button
++            onClick={() => setAnswersOpen((v) => !v)}
++            aria-expanded={answersOpen}
++            aria-controls="answers-panel"
++            className="flex w-full items-center justify-between py-2 text-xs font-medium uppercase tracking-wide text-muted hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-sage"
++          >
++            <span>Your answers so far ({history.length})</span>
++            <svg
++              aria-hidden="true"
++              viewBox="0 0 20 20"
++              className={`h-4 w-4 shrink-0 transition-transform ${answersOpen ? "rotate-180" : ""}`}
++              fill="currentColor"
++            >
++              <path d="M5.25 7.5L10 12.25L14.75 7.5H5.25Z" />
++            </svg>
++          </button>
++
++          {answersOpen && (
++            <div
++              id="answers-panel"
++              role="region"
++              aria-label="Your answers so far"
++              className="absolute bottom-full left-0 right-0 z-20 mb-1 max-h-64 overflow-y-auto rounded-2xl border border-line bg-white p-3 shadow-lg"
++            >
++              <ul className="space-y-2">
++                {history.map((qa, idx) => (
++                  <li key={idx} className="rounded-lg bg-paper px-3 py-2 text-sm shadow-sm">
++                    <p className="text-xs text-muted">{qa.question}</p>
++                    {editingIndex === idx ? (
++                      <div className="mt-1 flex items-center gap-2">
++                        <input
++                          value={editDraft}
++                          onChange={(e) => setEditDraft(e.target.value)}
++                          aria-label="Edit your answer"
++                          className="flex-1 rounded-md border border-line px-2 py-1 text-sm focus:border-sage focus:outline-none"
++                        />
++                        <button
++                          onClick={saveEdit}
++                          disabled={loading || !editDraft.trim()}
++                          className="rounded-md bg-sage px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
++                        >
++                          Save
++                        </button>
++                        <button
++                          onClick={cancelEdit}
++                          className="rounded-md bg-sage-soft px-3 py-1 text-xs font-medium text-ink"
++                        >
++                          Cancel
++                        </button>
++                      </div>
++                    ) : (
++                      <div className="mt-1 flex items-center justify-between gap-2">
++                        <span className="text-ink">{qa.answer}</span>
++                        <button
++                          onClick={() => startEdit(idx)}
++                          disabled={loading}
++                          aria-label={`Edit answer to: ${qa.question}`}
++                          className="shrink-0 text-xs font-medium text-sage underline underline-offset-2 disabled:opacity-40"
++                        >
++                          Edit
++                        </button>
++                      </div>
++                    )}
++                  </li>
++                ))}
++              </ul>
++            </div>
++          )}
+         </div>
+       )}
+ 
+-- 
+2.34.1
+
