@@ -208,7 +208,10 @@ rather than claimed as fully complete:
   remains stateless; no server-side session store was introduced. A
   dedicated multi-conversation history browser (switching between past,
   separate conversations) was not built -- only the current conversation is
-  resumable.
+  resumable. Since persistence means a reload no longer starts a fresh
+  conversation on its own, an explicit "New conversation" button was added
+  to the header (visible once a conversation has started) that clears both
+  the visible transcript and the persisted session immediately.
 - The free-tier backend spins down when idle, causing a cold-start delay on
   the first request.
 - No automated frontend tests yet (backend now has unit tests for the safety

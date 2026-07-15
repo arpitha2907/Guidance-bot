@@ -278,6 +278,29 @@ export default function Home() {
     baseMessagesRef.current = null;
   }
 
+  // Explicit user-triggered reset (the "New conversation" button), as
+  // opposed to resetConversation() above which just clears state after the
+  // backend signals a conversation is done (crisis/final guidance) while
+  // leaving the finished transcript on screen. This one wipes the visible
+  // transcript and the persisted session too, so it takes effect immediately
+  // rather than waiting for the next reload.
+  function startNewConversation() {
+    if (messages.length > 0) {
+      const confirmed = window.confirm(
+        "Start a new conversation? This will clear the current one."
+      );
+      if (!confirmed) return;
+    }
+    resetConversation();
+    setMessages([]);
+    setAnswersOpen(false);
+    setInput("");
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch {}
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }
+
   function send() {
     const text = input.trim();
     if (!text || loading) return;
@@ -398,12 +421,22 @@ export default function Home() {
 
   return (
     <div className="mx-auto flex h-dvh max-w-2xl flex-col px-4">
-      <header className="border-b border-line pb-4 pt-6">
-        <h1 className="text-xl font-semibold tracking-tight text-ink">Guidance</h1>
-        <p className="mt-1 text-sm text-muted">
-          General guidance, grounded in trusted sources. Not a substitute for
-          professional care.
-        </p>
+      <header className="flex items-start justify-between gap-4 border-b border-line pb-4 pt-6">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Guidance</h1>
+          <p className="mt-1 text-sm text-muted">
+            General guidance, grounded in trusted sources. Not a substitute for
+            professional care.
+          </p>
+        </div>
+        {messages.length > 0 && (
+          <button
+            onClick={startNewConversation}
+            className="shrink-0 whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-sage-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-sage"
+          >
+            New conversation
+          </button>
+        )}
       </header>
 
       <main
