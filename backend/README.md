@@ -53,8 +53,9 @@ model actually configured in `src/llm.js`). Wait until the index status is
 **Active** (~1 min).
 
 ### 5. Add data
-Drop `.md`/`.txt` files in `data/`, named by domain (`health_*`, `emotional_*`).
-Two samples are included so you can test immediately.
+Drop `.md`/`.txt` files in `data/`, named by domain (`health_*`,
+`emotional_*`, `legal_*`; anything else falls into `general`). Sample files
+for all four domains are included so you can test immediately.
 
 ### 6. Ingest
 ```bash
